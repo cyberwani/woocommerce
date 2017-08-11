@@ -1,50 +1,65 @@
 <?php
 /**
- * Email Order Item
+ * Email Order Items
  *
- * Shows a line item inside the order emails table
+ * This template can be overridden by copying it to yourtheme/woocommerce/emails/email-order-items.php.
  *
+ * HOWEVER, on occasion WooCommerce will need to update template files and you
+ * (the theme developer) will need to copy the new files to your theme to
+ * maintain compatibility. We try to do this as little as possible, but it does
+ * happen. When this occurs the version of the template file will be bumped and
+ * the readme will list any important changes.
+ *
+ * @see 	    https://docs.woocommerce.com/document/template-structure/
  * @author 		WooThemes
  * @package 	WooCommerce/Templates/Emails
- * @version     1.6.4
+ * @version     3.2.0
  */
 
-global $woocommerce;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
-foreach ($items as $item) :
+$text_align = is_rtl() ? 'right' : 'left';
 
-	// Get/prep product data
-	$_product = $order->get_product_from_item( $item );
-	$item_meta = new WC_Order_Item_Meta( $item['item_meta'] );
-	$image = ($show_image) ? '<img src="'. current(wp_get_attachment_image_src( get_post_thumbnail_id( $_product->id ), 'thumbnail')) .'" alt="Product Image" height="'.$image_size[1].'" width="'.$image_size[0].'" style="vertical-align:middle; margin-right: 10px;" />' : '';
+foreach ( $items as $item_id => $item ) :
+	if ( apply_filters( 'woocommerce_order_item_visible', true, $item ) ) {
+		$product = $item->get_product();
+		?>
+		<tr class="<?php echo esc_attr( apply_filters( 'woocommerce_order_item_class', 'order_item', $item, $order ) ); ?>">
+			<td class="td" style="text-align:<?php echo $text_align; ?>; vertical-align:middle; border: 1px solid #eee; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif; word-wrap:break-word;"><?php
 
-	?>
-	<tr>
-		<td style="text-align:left; vertical-align:middle; border: 1px solid #eee;"><?php
+				// Show title/image etc
+				if ( $show_image ) {
+					echo apply_filters( 'woocommerce_order_item_thumbnail', '<div style="margin-bottom: 5px"><img src="' . ( $product->get_image_id() ? current( wp_get_attachment_image_src( $product->get_image_id(), 'thumbnail' ) ) : wc_placeholder_img_src() ) . '" alt="' . esc_attr__( 'Product image', 'woocommerce' ) . '" height="' . esc_attr( $image_size[1] ) . '" width="' . esc_attr( $image_size[0] ) . '" style="vertical-align:middle; margin-' . ( is_rtl() ? 'left' : 'right' ) . ': 10px;" /></div>', $item );
+				}
 
-			// Show title/image etc
-			echo 	apply_filters( 'woocommerce_order_product_image', $image, $_product, $show_image);
+				// Product name
+				echo apply_filters( 'woocommerce_order_item_name', $item->get_name(), $item, false );
 
-			// Product name
-			echo 	apply_filters( 'woocommerce_order_product_title', $item['name'], $_product );
+				// SKU
+				if ( $show_sku && is_object( $product ) && $product->get_sku() ) {
+					echo ' (#' . $product->get_sku() . ')';
+				}
 
-			// SKU
-			echo 	($show_sku && $_product->get_sku()) ? ' (#' . $_product->get_sku() . ')' : '';
+				// allow other plugins to add additional product information here
+				do_action( 'woocommerce_order_item_meta_start', $item_id, $item, $order, $plain_text );
 
-			// File URL
-			echo 	( $show_download_links && $_product->exists() && $_product->is_downloadable() && $_product->has_file() ) ? '<br/><small>' . __( 'Download:', 'woocommerce' ) . ' <a href="' . $order->get_downloadable_file_url( $item['id'], $item['variation_id'] ) . '" target="_blank">' . $order->get_downloadable_file_url( $item['id'], $item['variation_id'] ) . '</a></small>' : '';
+				wc_display_item_meta( $item );
 
-			// Variation
-			echo 	($item_meta->meta) ? '<br/><small>' . nl2br( $item_meta->display( true, true ) ) . '</small>' : '';
+				// allow other plugins to add additional product information here
+				do_action( 'woocommerce_order_item_meta_end', $item_id, $item, $order, $plain_text );
 
-		?></td>
-		<td style="text-align:left; vertical-align:middle; border: 1px solid #eee;"><?php echo $item['qty'] ;?></td>
-		<td style="text-align:left; vertical-align:middle; border: 1px solid #eee;"><?php echo $order->get_formatted_line_subtotal( $item ); ?></td>
-	</tr>
+			?></td>
+			<td class="td" style="text-align:<?php echo $text_align; ?>; vertical-align:middle; border: 1px solid #eee; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;"><?php echo apply_filters( 'woocommerce_email_order_item_quantity', $item->get_quantity(), $item ); ?></td>
+			<td class="td" style="text-align:<?php echo $text_align; ?>; vertical-align:middle; border: 1px solid #eee; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;"><?php echo $order->get_formatted_line_subtotal( $item ); ?></td>
+		</tr>
+		<?php
+	}
 
-	<?php if ($show_purchase_note && $purchase_note = get_post_meta( $_product->id, '_purchase_note', true)) : ?>
+	if ( $show_purchase_note && is_object( $product ) && ( $purchase_note = $product->get_purchase_note() ) ) : ?>
 		<tr>
-			<td colspan="3" style="text-align:left; vertical-align:middle; border: 1px solid #eee;"><?php echo apply_filters('the_content', $purchase_note); ?></td>
+			<td colspan="3" style="text-align:<?php echo $text_align; ?>; vertical-align:middle; border: 1px solid #eee; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;"><?php echo wpautop( do_shortcode( wp_kses_post( $purchase_note ) ) ); ?></td>
 		</tr>
 	<?php endif; ?>
 

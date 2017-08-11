@@ -2,47 +2,46 @@
 /**
  * Related Products
  *
+ * This template can be overridden by copying it to yourtheme/woocommerce/single-product/related.php.
+ *
+ * HOWEVER, on occasion WooCommerce will need to update template files and you
+ * (the theme developer) will need to copy the new files to your theme to
+ * maintain compatibility. We try to do this as little as possible, but it does
+ * happen. When this occurs the version of the template file will be bumped and
+ * the readme will list any important changes.
+ *
+ * @see 	    https://docs.woocommerce.com/document/template-structure/
  * @author 		WooThemes
  * @package 	WooCommerce/Templates
- * @version     1.6.4
+ * @version     3.0.0
  */
 
-global $product, $woocommerce_loop;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
-$related = $product->get_related();
+if ( $related_products ) : ?>
 
-if ( sizeof($related) == 0 ) return;
+	<section class="related products">
 
-$args = apply_filters('woocommerce_related_products_args', array(
-	'post_type'				=> 'product',
-	'ignore_sticky_posts'	=> 1,
-	'no_found_rows' 		=> 1,
-	'posts_per_page' 		=> $posts_per_page,
-	'orderby' 				=> $orderby,
-	'post__in' 				=> $related
-) );
+		<h2><?php esc_html_e( 'Related products', 'woocommerce' ); ?></h2>
 
-$products = new WP_Query( $args );
+		<?php woocommerce_product_loop_start(); ?>
 
-$woocommerce_loop['columns'] 	= $columns;
+			<?php foreach ( $related_products as $related_product ) : ?>
 
-if ( $products->have_posts() ) : ?>
+				<?php
+				 	$post_object = get_post( $related_product->get_id() );
 
-	<div class="related products">
+					setup_postdata( $GLOBALS['post'] =& $post_object );
 
-		<h2><?php _e('Related Products', 'woocommerce'); ?></h2>
+					wc_get_template_part( 'content', 'product' ); ?>
 
-		<ul class="products">
+			<?php endforeach; ?>
 
-			<?php while ( $products->have_posts() ) : $products->the_post(); ?>
+		<?php woocommerce_product_loop_end(); ?>
 
-				<?php woocommerce_get_template_part( 'content', 'product' ); ?>
-
-			<?php endwhile; // end of the loop. ?>
-
-		</ul>
-
-	</div>
+	</section>
 
 <?php endif;
 
